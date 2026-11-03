@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      run_eval:
+        description: "Also run the live eval (needs the LLM_API_KEY secret and the LLM_MODEL variable)"
+        type: boolean
+        default: false
+
+jobs:
+  test:
+    name: Tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: pytest -v
+      - name: CLI smoke test
+        run: |
+          coffee-agent init-db
+          coffee-agent sql "SELECT COUNT(*) FROM orders"
+          ! coffee-agent sql "DROP TABLE orders"
+          coffee-agent search "free shipping" -k 1
+
+  eval:
+    name: Live eval (manual)
+    if: github.event_name == 'workflow_dispatch' && inputs.run_eval
+    needs: test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -e .
+      - run: python evals/run_eval.py
+        env:
+          LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-results
+          path: evals/results/

@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "coffee-data-agent"
+version = "0.1.0"
+description = "LLM tool-use agent and MCP server: text-to-SQL + RAG over a specialty-coffee marketplace"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Davi Fraga" }]
+requires-python = ">=3.11"
+dependencies = ["openai>=1.50", "mcp>=2.3", "pydantic>=2.7"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.scripts]
+coffee-agent = "coffee_agent.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+coffee_agent = ["knowledge/*.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]
